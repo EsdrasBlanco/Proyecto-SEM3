@@ -1,9 +1,7 @@
-import express from 'express';
-import type { Request, Response } from "express";
+import { Router } from 'express';
+import type { Request, Response } from 'express';
 
-const app = express();
-const PORT = 3000;
-app.use(express.json());
+const router = Router();
 
 interface Estudiante {  
   id: number;  
@@ -12,26 +10,46 @@ interface Estudiante {
   bootcamp: string;
 }
 
-const estudiantes: Estudiante[] = [];
+let estudiantes: Estudiante[] = [];
 let idCounter = 1;
 
-app.get("/api/status", function (req: Request, res: Response) {
+router.get("/", (req: Request, res: Response) => {
+  const bootcampQuery = req.query.bootcamp;
+
+  let resultado = estudiantes;
+
+  if (bootcampQuery && typeof bootcampQuery === 'string') {
+    resultado = estudiantes.filter(
+      e => e.bootcamp.toLowerCase() === bootcampQuery.toLowerCase()
+    );
+  }
+
   res.status(200).json({
     ok: true,
-    status: "Servidor en línea",
-    version: "1.0.0"
+    total: resultado.length,
+    data: resultado
   });
 });
 
-app.get("/api/estudiantes", (req: Request, res: Response) => {
+router.get("/:id", (req: Request, res: Response) => {
+  const idBuscando = Number(req.params.id);
+  const estudianteEncontrado = estudiantes.find(e => e.id === idBuscando);
+
+  if (!estudianteEncontrado) {
+    res.status(404).json({
+      ok: false,
+      error: `El estudiante con el ID ${idBuscando} no existe.`
+    });
+    return;
+  }
+
   res.status(200).json({
     ok: true,
-    total: estudiantes.length,
-    data: estudiantes
+    data: estudianteEncontrado
   });
 });
 
-app.post("/api/estudiantes", (req: Request, res: Response) => {
+router.post("/", (req: Request, res: Response) => {
   const { nombre, email, bootcamp } = req.body;
 
   if (!email || typeof email !== 'string' || email.trim() === '') {
@@ -58,7 +76,7 @@ app.post("/api/estudiantes", (req: Request, res: Response) => {
   });
 });
 
-app.put("/api/estudiantes/:id", (req: Request, res: Response) => {
+router.put("/:id", (req: Request, res: Response) => {
   const idBuscando = Number(req.params.id);
   const indiceEncontrado = estudiantes.findIndex(e => e.id === idBuscando);
 
@@ -95,7 +113,7 @@ app.put("/api/estudiantes/:id", (req: Request, res: Response) => {
   });
 });
 
-app.delete("/api/estudiantes/:id", (req: Request, res: Response) => {
+router.delete("/:id", (req: Request, res: Response) => {
   const idBuscando = Number(req.params.id);
   const existe = estudiantes.some(e => e.id === idBuscando);
 
@@ -107,7 +125,7 @@ app.delete("/api/estudiantes/:id", (req: Request, res: Response) => {
     return;
   }
 
-  const estudiantesActualizados = estudiantes.filter(e => e.id !== idBuscando);
+  estudiantes = estudiantes.filter(e => e.id !== idBuscando);
 
   res.status(200).json({
     ok: true,
@@ -115,6 +133,4 @@ app.delete("/api/estudiantes/:id", (req: Request, res: Response) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
-});
+export default router;
